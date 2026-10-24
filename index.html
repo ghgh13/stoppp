@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>나만의 목표 달성하기 (Personal Goal Tracker)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Nanum+Gothic:wght@400;700;800&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-color: #6366f1;
+      --bg-color: #0f172a;
+      --card-bg: #1e293b;
+      --text-color: #f8fafc;
+    }
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      font-family: 'Noto Sans KR', sans-serif;
+      transition: background-color 0.3s, color 0.3s;
+    }
+    .custom-card {
+      background-color: var(--card-bg);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    /* Fullscreen Focus Lock CSS */
+    .focus-lock-active {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      z-index: 999999 !important;
+      background-color: var(--bg-color) !important;
+      overflow: hidden !important;
+    }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.2);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
+
+  <!-- APP CONTAINER -->
+  <div id="app" class="flex-1 flex flex-col min-h-screen">
+    
+    <!-- TOP NAVBAR -->
+    <header class="custom-card border-b px-4 py-3 flex items-center justify-between sticky top-0 z-40 backdrop-blur-md bg-opacity-80">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white text-xl font-bold shadow-lg shadow-indigo-500/30">
+          🎯
+        </div>
+        <div>
+          <h1 class="font-bold text-lg leading-tight flex items-center gap-2">
+            나만의 목표 달성하기
+            <span id="currentGoalBadge" class="text-xs px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-medium border border-indigo-500/30">목표 없음</span>
+          </h1>
+          <p id="personalityTypeBadge" class="text-xs text-slate-400">성향 분석 미진행</p>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-2">
+        <button onclick="openSurveyModal()" class="px-3 py-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-clipboard-question text-indigo-400"></i>
+          <span>성향 재설문</span>
+        </button>
+        <button onclick="openGoalManagerModal()" class="px-3 py-1.5 text-xs font-medium bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg shadow-md flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-list-check"></i>
+          <span>목표 목록</span>
+        </button>
+        <button onclick="toggleLockMode()" id="lockBtn" class="px-3 py-1.5 text-xs font-medium bg-rose-600 hover:bg-rose-500 text-white rounded-lg shadow-md flex items-center gap-1.5 transition animate-pulse">
+          <i class="fa-solid fa-lock"></i>
+          <span>몰입 잠금 시작</span>
+        </button>
+        <button onclick="openSettingsModal()" class="p-2 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition">
+          <i class="fa-solid fa-gear text-base"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- MAIN DASHBOARD CONTENT -->
+    <main class="flex-1 p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 max-w-7xl w-full mx-auto">
+      
+      <!-- LEFT COLUMN: DAILY STEP QUESTS (4 cols) -->
+      <section class="lg:col-span-4 flex flex-col space-y-4">
+        <div class="custom-card rounded-2xl p-5 flex-1 flex flex-col shadow-xl">
+          <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-700/50">
+            <h2 class="font-bold text-base flex items-center gap-2">
+              <i class="fa-solid fa-tasks text-indigo-400"></i>
+              오늘의 목표 단계 (일일 퀘스트)
+            </h2>
+            <button onclick="addCustomStepPrompt()" class="text-xs bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-indigo-500/30 px-2.5 py-1 rounded-lg flex items-center gap-1 transition">
+              <i class="fa-solid fa-plus"></i> 단계 추가
+            </button>
+          </div>
+
+          <!-- QUEST LIST CONTAINER -->
+          <div id="stepListContainer" class="flex-1 space-y-2.5 overflow-y-auto max-h-[500px] pr-1">
+            <!-- Dynamic Step Items loaded here -->
+          </div>
+
+          <div class="mt-4 pt-3 border-t border-slate-700/50 text-xs text-slate-400 flex justify-between items-center">
+            <span>체크 시 달성률 반영</span>
+            <span id="stepProgressCount" class="font-semibold text-indigo-400">0 / 0 완료</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- CENTER COLUMN: PROGRESS & TIMER (5 cols) -->
+      <section class="lg:col-span-5 flex flex-col space-y-4">
+        <!-- PROGRESS GAUGE -->
+        <div class="custom-card rounded-2xl p-6 shadow-xl flex flex-col items-center justify-center text-center relative overflow-hidden">
+          <div class="absolute top-3 left-4 text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+            <i class="fa-solid fa-chart-line text-emerald-400"></i> 달성률 및 소요시간
+          </div>
+
+          <!-- CIRCULAR PROGRESS -->
+          <div class="relative w-44 h-44 my-4 flex items-center justify-center">
+            <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+              <path class="text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              <path id="progressCircle" class="text-indigo-500 transition-all duration-700 ease-out" stroke-dasharray="0, 100" stroke-width="3.5" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            </svg>
+            <div class="absolute flex flex-col items-center">
+              <span id="progressPercent" class="text-3xl font-extrabold tracking-tight">0%</span>
+              <span class="text-[10px] text-slate-400 mt-0.5">오늘의 진행도</span>
+            </div>
+          </div>
+
+          <p id="motivationalQuote" class="text-xs text-slate-300 font-medium bg-slate-800/80 px-4 py-2 rounded-xl border border-slate-700/50">
+            "작은 단계를 꾸준히 달성하여 거대한 목표를 이루세요!"
+          </p>
+        </div>
+
+        <!-- TIMER CONTROL CARD -->
+        <div class="custom-card rounded-2xl p-6 shadow-xl flex-1 flex flex-col justify-between">
+          <div class="flex justify-between items-center mb-2">
+            <span class="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+              <i class="fa-regular fa-clock text-indigo-400"></i> 몰입 집중 타이머
+            </span>
+            <span id="timerStatusBadge" class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">대기 중</span>
+          </div>
+
+          <div class="text-center py-4">
+            <div id="timerDisplay" class="text-5xl font-mono font-black tracking-wider text-slate-100">
+              00:00:00
+            </div>
+            <p class="text-xs text-slate-400 mt-2">오늘 총 집중한 시간: <span id="totalFocusedTime" class="text-indigo-400 font-bold">0분</span></p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 mt-2">
+            <button id="timerToggleBtn" onclick="toggleTimer()" class="py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg transition flex items-center justify-center gap-2">
+              <i class="fa-solid fa-play"></i> 몰입 시작
+            </button>
+            <button onclick="resetTimer()" class="py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl border border-slate-700 transition flex items-center justify-center gap-2">
+              <i class="fa-solid fa-rotate-right"></i> 리셋
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT COLUMN: ALLOWED TOOLS / APPS (3 cols) -->
+      <section class="lg:col-span-3 flex flex-col space-y-4">
+        <div class="custom-card rounded-2xl p-5 flex-1 flex flex-col shadow-xl">
+          <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-700/50">
+            <h2 class="font-bold text-base flex items-center gap-2">
+              <i class="fa-solid fa-cubes text-emerald-400"></i>
+              허용 앱 & 학습 도구
+            </h2>
+            <span class="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded">집중 지원</span>
+          </div>
+
+          <!-- APP GRID -->
+          <div class="grid grid-cols-2 gap-3 flex-1">
+            <button onclick="openAppTool('notepad')" class="p-3 bg-slate-800/80 hover:bg-slate-700/80 rounded-xl border border-slate-700 flex flex-col items-center justify-center gap-2 transition group">
+              <div class="w-10 h-10 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center text-lg group-hover:scale-110 transition">
+                <i class="fa-solid fa-note-sticky"></i>
+              </div>
+              <span class="text-xs font-medium text-slate-300">퀵 메모장</span>
+            </button>
+
+            <button onclick="openAppTool('calculator')" class="p-3 bg-slate-800/80 hover:bg-slate-700/80 rounded-xl border border-slate-700 flex flex-col items-center justify-center gap-2 transition group">
+              <div class="w-10 h-10 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-lg group-hover:scale-110 transition">
+                <i class="fa-solid fa-calculator"></i>
+              </div>
+              <span class="text-xs font-medium text-slate-300">계산기</span>
+            </button>
+
+            <button onclick="openAppTool('ebs')" class="p-3 bg-slate-800/80 hover:bg-slate-700/80 rounded-xl border border-slate-700 flex flex-col items-center justify-center gap-2 transition group">
+              <div class="w-10 h-10 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center text-lg group-hover:scale-110 transition">
+                <i class="fa-solid fa-graduation-cap"></i>
+              </div>
+              <span class="text-xs font-medium text-slate-300">EBS 강좌</span>
+            </button>
+
+            <button onclick="openAppTool('music')" class="p-3 bg-slate-800/80 hover:bg-slate-700/80 rounded-xl border border-slate-700 flex flex-col items-center justify-center gap-2 transition group">
+              <div class="w-10 h-10 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center text-lg group-hover:scale-110 transition">
+                <i class="fa-solid fa-music"></i>
+              </div>
+              <span class="text-xs font-medium text-slate-300">집중 BGM</span>
+            </button>
+          </div>
+
+          <div class="mt-4 pt-3 border-t border-slate-700/50">
+            <p class="text-[11px] text-slate-400">잠금 모드 중에도 위 허용 도구들은 자유롭게 팝업 창으로 사용 가능합니다.</p>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- MODAL: SURVEY (ONBOARDING) -->
+  <div id="surveyModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="custom-card rounded-2xl max-w-lg w-full p-6 shadow-2xl relative border border-slate-700">
+      <div class="text-center mb-6">
+        <span class="text-xs font-bold text-indigo-400 uppercase tracking-wider">Onboarding Survey</span>
+        <h2 class="text-xl font-extrabold mt-1">학습 성향 분석 설문</h2>
+        <p class="text-xs text-slate-400 mt-1">5가지 간단한 질문을 통해 나에게 딱 맞는 목표 달성 전략을 찾습니다.</p>
+      </div>
+
+      <div id="surveyQuestionContainer" class="space-y-4">
+        <!-- Question content dynamically rendered -->
+      </div>
+
+      <div class="mt-6 flex justify-between items-center pt-4 border-t border-slate-700/50">
+        <span id="surveyStepText" class="text-xs text-slate-400">질문 1 / 5</span>
+        <div class="flex gap-2">
+          <button id="surveyPrevBtn" onclick="prevSurveyQuestion()" class="px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg hidden">이전</button>
+          <button id="surveyNextBtn" onclick="nextSurveyQuestion()" class="px-4 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg shadow-md">다음</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: GOAL MANAGER (MULTI-GOAL) -->
+  <div id="goalManagerModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="custom-card rounded-2xl max-w-2xl w-full p-6 shadow-2xl relative border border-slate-700 max-h-[90vh] flex flex-col">
+      <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-700">
+        <h2 class="text-lg font-bold flex items-center gap-2">
+          <i class="fa-solid fa-bullseye text-indigo-400"></i> 목표 목록 및 신규 목표 추가
+        </h2>
+        <button onclick="closeGoalManagerModal()" class="text-slate-400 hover:text-slate-200">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto space-y-6 pr-1">
+        <!-- CREATE NEW GOAL FORM -->
+        <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+          <h3 class="text-xs font-bold text-indigo-300 uppercase mb-3">새 목표 등록</h3>
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">최종 목표 이름</label>
+              <input id="newGoalTitle" type="text" placeholder="예: 정보처리기사 자격증 취득, 수학 1등급 달성" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500 text-slate-100">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">목표 기간 (일 수)</label>
+                <input id="newGoalDays" type="number" min="1" value="30" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500 text-slate-100">
+              </div>
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">나의 관심사 카테고리</label>
+                <select id="newGoalCategory" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500 text-slate-100">
+                  <option value="게임">🎮 게임 (퀘스트 스타일)</option>
+                  <option value="운동">🏋️ 운동 (체력 및 루틴)</option>
+                  <option value="음악">🎵 음악 (리듬 및 단계)</option>
+                  <option value="학업">📚 일반 학업/공부</option>
+                </select>
+              </div>
+            </div>
+            <button onclick="createNewGoal()" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-lg shadow transition">
+              단순 단계별 목표 플랜 자동 생성하기
+            </button>
+          </div>
+        </div>
+
+        <!-- GOAL LIST -->
+        <div>
+          <h3 class="text-xs font-bold text-slate-400 uppercase mb-3">등록된 목표 목록</h3>
+          <div id="goalListContainer" class="space-y-2">
+            <!-- Goals dynamically rendered -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: SETTINGS & COLOR PICKER -->
+  <div id="settingsModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="custom-card rounded-2xl max-w-md w-full p-6 shadow-2xl relative border border-slate-700">
+      <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-700">
+        <h2 class="text-lg font-bold flex items-center gap-2">
+          <i class="fa-solid fa-palette text-indigo-400"></i> 디자인 & 커스텀 설정
+        </h2>
+        <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-slate-200">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4">
+        <!-- COLOR THEME PRESETS -->
+        <div>
+          <label class="block text-xs text-slate-400 mb-2">프리셋 테마 선택</label>
+          <div class="grid grid-cols-2 gap-2">
+            <button onclick="applyTheme('#6366f1', '#0f172a', '#1e293b')" class="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 text-xs flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-indigo-500"></span> 모던 다크
+            </button>
+            <button onclick="applyTheme('#10b981', '#022c22', '#064e3b')" class="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 text-xs flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-emerald-500"></span> 네오 게이밍
+            </button>
+            <button onclick="applyTheme('#f59e0b', '#1c1917', '#292524')" class="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 text-xs flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-amber-500"></span> 웜 미니멀
+            </button>
+            <button onclick="applyTheme('#ec4899', '#18181b', '#27272a')" class="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 text-xs flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-pink-500"></span> 선셋 오렌지
+            </button>
+          </div>
+        </div>
+
+        <!-- CUSTOM COLOR PICKER -->
+        <div class="pt-2 border-t border-slate-700/50 grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">메인 강조색</label>
+            <input type="color" id="primaryColorPicker" onchange="customColorChanged()" value="#6366f1" class="w-full h-9 bg-slate-900 border border-slate-700 rounded cursor-pointer">
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">배경색</label>
+            <input type="color" id="bgColorPicker" onchange="customColorChanged()" value="#0f172a" class="w-full h-9 bg-slate-900 border border-slate-700 rounded cursor-pointer">
+          </div>
+        </div>
+
+        <!-- FONT SELECTION -->
+        <div class="pt-2 border-t border-slate-700/50">
+          <label class="block text-xs text-slate-400 mb-1">폰트 스타일</label>
+          <select id="fontSelect" onchange="changeFont(this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs focus:outline-none text-slate-100">
+            <option value="'Noto Sans KR', sans-serif">Noto Sans (기본)</option>
+            <option value="'Nanum Gothic', sans-serif">나눔고딕</option>
+            <option value="'Gowun Batang', serif">고운바탕 (명조)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: TOOL WINDOW (NOTEPAD / CALCULATOR / ETC) -->
+  <div id="toolModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="custom-card rounded-2xl max-w-md w-full p-5 shadow-2xl relative border border-slate-700">
+      <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-700">
+        <h3 id="toolModalTitle" class="font-bold text-sm text-indigo-300">도구함</h3>
+        <button onclick="closeToolModal()" class="text-slate-400 hover:text-slate-200">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div id="toolModalBody" class="min-h-[200px]">
+        <!-- Dynamic tool content -->
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT LOGIC -->
+  <script>
+    // GLOBAL STATE & STORAGE
+    let state = {
+      personality: null,
+      goals: [],
+      currentGoalId: null,
+      timerSeconds: 0,
+      timerRunning: false,
+      totalFocusedMinutes: 0,
+      isLocked: false,
+      theme: {
+        primary: '#6366f1',
+        bg: '#0f172a',
+        card: '#1e293b',
+        font: "'Noto Sans KR', sans-serif"
+      }
+    };
+
+    let timerInterval = null;
+
+    // SURVEY QUESTIONS (5 QUESTIONS)
+    const surveyQuestions = [
+      {
+        q: "1. 학업 목표를 정할 때 평소 스타일에 가까운 것은?",
+        options: [
+          { text: "게임 퀘스트 깨듯 작고 명확한 과제를 하나씩 지워나갈 때 재미있다.", type: "게임형" },
+          { text: "매일 일정한 시각에 정해진 분량을 규칙적으로 복습하는 게 편하다.", type: "루틴형" },
+          { text: "시험 직전이나 임박했을 때 단기간에 엄청난 몰입을 발휘한다.", type: "폭발형" },
+          { text: "강제적인 환경이나 모바일 앱 차단이 있어야 공부에 들어간다.", type: "배수진형" }
+        ]
+      },
+      {
+        q: "2. 공부를 하다가 중간에 포기하게 되는 가장 큰 원인은?",
+        options: [
+          { text: "끝이 보이지 않는 막연하고 거대한 목표 크기 때문", type: "게임형" },
+          { text: "매일 지속할 수 있는 습관화가 부족해서", type: "루틴형" },
+          { text: "초반 열정이 식고 동기부여가 지속되지 않아서", type: "폭발형" },
+          { text: "스마트폰이나 주변 유혹거리가 너무 많아서", type: "배수진형" }
+        ]
+      },
+      {
+        q: "3. 나에게 가장 효과적인 동기부여 방식은?",
+        options: [
+          { text: "단계별 완료 경험과 수치화된 달성률(%) 보상", type: "게임형" },
+          { text: "달력에 도장을 찍듯 연속 달성 기록을 이어가는 것", type: "루틴형" },
+          { text: "목표 달성 후 나에게 줄 확실한 휴식과 보상", type: "폭발형" },
+          { text: "딴짓을 전혀 할 수 없는 강력한 몰입 모드 유지", type: "배수진형" }
+        ]
+      },
+      {
+        q: "4. 하루 공부 목표 분량을 정할 때 선호하는 기준은?",
+        options: [
+          { text: "오늘 당장 끝낼 수 있는 마이크로 3~5개 단계", type: "게임형" },
+          { text: "매일 1~2시간씩 고정된 루틴 분량", type: "루틴형" },
+          { text: "오늘의 핵심 단원 하나를 완벽히 파헤치는 뽀개기 분량", type: "폭발형" },
+          { text: "목표 달성 전까지 화면을 열 수 없는 의무 분량", type: "배수진형" }
+        ]
+      },
+      {
+        q: "5. 몰입 화면 잠금 모드에서 가장 필요한 허용 기능은?",
+        options: [
+          { text: "완료 단계를 하나씩 체크하는 인터랙티브 목록", type: "게임형" },
+          { text: "규칙적인 시간 체크를 돕는 스톱워치", type: "루틴형" },
+          { text: "집중을 돕는 음악 및 퀵 메모장", type: "폭발형" },
+          { text: "다른 애플리케이션 이탈을 완전 차단하는 강제 모드", type: "배수진형" }
+        ]
+      }
+    ];
+
+    let currentSurveyIdx = 0;
+    let surveyAnswers = [];
+
+    // INITIALIZATION
+    window.addEventListener('DOMContentLoaded', () => {
+      loadState();
+      if (!state.personality) {
+        openSurveyModal();
+      } else if (state.goals.length === 0) {
+        openGoalManagerModal();
+      }
+      renderDashboard();
+      setupLockListeners();
+    });
+
+    // LOCAL STORAGE
+    function saveState() {
+      localStorage.setItem('my_goal_tracker_data', JSON.stringify(state));
+    }
+
+    function loadState() {
+      const data = localStorage.getItem('my_goal_tracker_data');
+      if (data) {
+        try {
+          state = JSON.parse(data);
+          applyTheme(state.theme.primary, state.theme.bg, state.theme.card, false);
+          if (state.theme.font) changeFont(state.theme.font, false);
+        } catch (e) {
+          console.error("Storage load failed", e);
+        }
+      }
+    }
+
+    // SURVEY LOGIC
+    function openSurveyModal() {
+      currentSurveyIdx = 0;
+      surveyAnswers = [];
+      document.getElementById('surveyModal').classList.remove('hidden');
+      renderSurveyQuestion();
+    }
+
+    function renderSurveyQuestion() {
+      const qObj = surveyQuestions[currentSurveyIdx];
+      document.getElementById('surveyStepText').innerText = `질문 ${currentSurveyIdx + 1} / ${surveyQuestions.length}`;
+      document.getElementById('surveyPrevBtn').classList.toggle('hidden', currentSurveyIdx === 0);
+      document.getElementById('surveyNextBtn').innerText = (currentSurveyIdx === surveyQuestions.length - 1) ? '분석 완료' : '다음';
+
+      let html = `<p class="font-bold text-sm text-slate-200 mb-3">${qObj.q}</p><div class="space-y-2">`;
+      qObj.options.forEach((opt, idx) => {
+        const isSelected = surveyAnswers[currentSurveyIdx] === opt.type;
+        html += `
+          <button onclick="selectSurveyOption('${opt.type}')" class="w-full text-left p-3 rounded-xl border text-xs transition ${
+            isSelected ? 'bg-indigo-600/30 border-indigo-500 text-indigo-200 font-bold' : 'bg-slate-800/60 border-slate-700/80 hover:bg-slate-700/50 text-slate-300'
+          }">
+            ${opt.text}
+          </button>
+        `;
+      });
+      html += `</div>`;
+      document.getElementById('surveyQuestionContainer').innerHTML = html;
+    }
+
+    function selectSurveyOption(type) {
+      surveyAnswers[currentSurveyIdx] = type;
+      renderSurveyQuestion();
+    }
+
+    function prevSurveyQuestion() {
+      if (currentSurveyIdx > 0) {
+        currentSurveyIdx--;
+        renderSurveyQuestion();
+      }
+    }
+
+    function nextSurveyQuestion() {
+      if (!surveyAnswers[currentSurveyIdx]) {
+        alert("옵션을 선택해 주세요!");
+        return;
+      }
+      if (currentSurveyIdx < surveyQuestions.length - 1) {
+        currentSurveyIdx++;
+        renderSurveyQuestion();
+      } else {
+        // Calculate Personality
+        const counts = {};
+        surveyAnswers.forEach(t => counts[t] = (counts[t] || 0) + 1);
+        let topType = '게임형';
+        let maxCount = 0;
+        for (let k in counts) {
+          if (counts[k] > maxCount) {
+            maxCount = counts[k];
+            topType = k;
+          }
+        }
+
+        const personalityMap = {
+          '게임형': '🎮 게이밍 퀘스트 소모형',
+          '루틴형': '📅 꾸준한 루틴 형성형',
+          '폭발형': '⚡ 단기 몰입 폭발형',
+          '배수진형': '🛡️ 배수진 환경 제어형'
+        };
+
+        state.personality = personalityMap[topType] || '🎮 게이밍 퀘스트 소모형';
+        saveState();
+        document.getElementById('surveyModal').classList.add('hidden');
+        renderDashboard();
+
+        if (state.goals.length === 0) {
+          openGoalManagerModal();
+        }
+      }
+    }
+
+    // MULTI-GOAL CREATION
+    function openGoalManagerModal() {
+      document.getElementById('goalManagerModal').classList.remove('hidden');
+      renderGoalList();
+    }
+
+    function closeGoalManagerModal() {
+      document.getElementById('goalManagerModal').classList.add('hidden');
+    }
+
+    function createNewGoal() {
+      const title = document.getElementById('newGoalTitle').value.trim();
+      const days = parseInt(document.getElementById('newGoalDays').value) || 30;
+      const category = document.getElementById('newGoalCategory').value;
+
+      if (!title) {
+        alert("목표 이름을 입력해 주세요!");
+        return;
+      }
+
+      // Generate Pure Step Milestones
+      const steps = [];
+      const stepCount = 5;
+      for (let i = 1; i <= stepCount; i++) {
+        steps.push({
+          id: Date.now() + i,
+          title: `단계 ${i}: ${title} - ${Math.round((i / stepCount) * 100)}% 준비 및 핵심 개념 실행`,
+          completed: false
+        });
+      }
+
+      const newGoal = {
+        id: 'goal_' + Date.now(),
+        title: title,
+        days: days,
+        category: category,
+        steps: steps,
+        createdAt: new Date().toLocaleDateString()
+      };
+
+      state.goals.push(newGoal);
+      state.currentGoalId = newGoal.id;
+      saveState();
+
+      document.getElementById('newGoalTitle').value = '';
+      closeGoalManagerModal();
+      renderDashboard();
+    }
+
+    function renderGoalList() {
+      const container = document.getElementById('goalListContainer');
+      if (state.goals.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-500 py-4 text-center">등록된 목표가 없습니다. 위에서 새 목표를 추가하세요!</p>`;
+        return;
+      }
+
+      let html = '';
+      state.goals.forEach(g => {
+        const isCurrent = g.id === state.currentGoalId;
+        const compCount = g.steps.filter(s => s.completed).length;
+        const pct = g.steps.length ? Math.round((compCount / g.steps.length) * 100) : 0;
+
+        html += `
+          <div class="p-3 rounded-xl border flex items-center justify-between transition ${
+            isCurrent ? 'bg-indigo-600/20 border-indigo-500' : 'bg-slate-800/40 border-slate-700/60 hover:bg-slate-800'
+          }">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-xs text-slate-100">${g.title}</span>
+                <span class="text-[10px] px-2 py-0.5 rounded bg-slate-700 text-slate-300">${g.category}</span>
+              </div>
+              <p class="text-[11px] text-slate-400 mt-0.5">기간: ${g.days}일 | 달성률: ${pct}% (${compCount}/${g.steps.length} 단계)</p>
+            </div>
+            <div class="flex items-center gap-2">
+              ${!isCurrent ? `<button onclick="switchGoal('${g.id}')" class="px-2.5 py-1 text-xs bg-indigo-600 hover:bg-indigo-500 text-white rounded">선택</button>` : `<span class="text-xs font-bold text-indigo-400">현재 선택됨</span>`}
+              <button onclick="deleteGoal('${g.id}')" class="text-slate-500 hover:text-rose-400 text-xs px-1"><i class="fa-solid fa-trash"></i></button>
+            </div>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+    }
+
+    function switchGoal(goalId) {
+      state.currentGoalId = goalId;
+      saveState();
+      renderGoalList();
+      renderDashboard();
+    }
+
+    function deleteGoal(goalId) {
+      if (!confirm("이 목표를 삭제하시겠습니까?")) return;
+      state.goals = state.goals.filter(g => g.id !== goalId);
+      if (state.currentGoalId === goalId) {
+        state.currentGoalId = state.goals.length ? state.goals[0].id : null;
+      }
+      saveState();
+      renderGoalList();
+      renderDashboard();
+    }
+
+    // DASHBOARD RENDERING
+    function renderDashboard() {
+      // Badges
+      document.getElementById('personalityTypeBadge').innerText = state.personality ? `성향: ${state.personality}` : '성향 분석 미진행';
+      
+      const currentGoal = state.goals.find(g => g.id === state.currentGoalId);
+      if (currentGoal) {
+        document.getElementById('currentGoalBadge').innerText = currentGoal.title;
+        renderSteps(currentGoal);
+      } else {
+        document.getElementById('currentGoalBadge').innerText = '목표 없음';
+        document.getElementById('stepListContainer').innerHTML = `<p class="text-xs text-slate-500 text-center py-8">목표를 먼저 추가해 주세요!</p>`;
+        updateProgressGauge(0, 0, 0);
+      }
+    }
+
+    function renderSteps(goal) {
+      const container = document.getElementById('stepListContainer');
+      if (!goal.steps || goal.steps.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-500 text-center py-8">단계가 없습니다. 우측 상단 [+ 단계 추가]를 누르세요.</p>`;
+        updateProgressGauge(0, 0, 0);
+        return;
+      }
+
+      let html = '';
+      let compCount = 0;
+      goal.steps.forEach((step, idx) => {
+        if (step.completed) compCount++;
+        html += `
+          <div class="p-3 bg-slate-800/60 rounded-xl border border-slate-700/80 flex items-center justify-between gap-2 group hover:border-slate-600 transition">
+            <label class="flex items-center gap-3 cursor-pointer flex-1 min-w-0">
+              <input type="checkbox" onchange="toggleStep('${step.id}')" ${step.completed ? 'checked' : ''} class="w-4 h-4 rounded text-indigo-600 focus:ring-0 bg-slate-900 border-slate-700 cursor-pointer">
+              <span class="text-xs text-slate-200 truncate ${step.completed ? 'line-through text-slate-500' : ''}">${step.title}</span>
+            </label>
+            <button onclick="removeStep('${step.id}')" class="text-slate-600 group-hover:text-rose-400 text-xs transition px-1">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+      document.getElementById('stepProgressCount').innerText = `${compCount} / ${goal.steps.length} 완료`;
+
+      const pct = Math.round((compCount / goal.steps.length) * 100);
+      updateProgressGauge(pct, compCount, goal.steps.length);
+    }
+
+    function toggleStep(stepId) {
+      const currentGoal = state.goals.find(g => g.id === state.currentGoalId);
+      if (!currentGoal) return;
+      const step = currentGoal.steps.find(s => s.id == stepId);
+      if (step) {
+        step.completed = !step.completed;
+        saveState();
+        renderSteps(currentGoal);
+      }
+    }
+
+    function addCustomStepPrompt() {
+      const currentGoal = state.goals.find(g => g.id === state.currentGoalId);
+      if (!currentGoal) {
+        alert("목표를 먼저 선택하거나 등록해 주세요!");
+        return;
+      }
+      const title = prompt("추가할 일일 단계 내용을 입력하세요:");
+      if (title && title.trim()) {
+        currentGoal.steps.push({
+          id: Date.now(),
+          title: title.trim(),
+          completed: false
+        });
+        saveState();
+        renderSteps(currentGoal);
+      }
+    }
+
+    function removeStep(stepId) {
+      const currentGoal = state.goals.find(g => g.id === state.currentGoalId);
+      if (!currentGoal) return;
+      currentGoal.steps = currentGoal.steps.filter(s => s.id != stepId);
+      saveState();
+      renderSteps(currentGoal);
+    }
+
+    function updateProgressGauge(pct, comp, total) {
+      document.getElementById('progressPercent').innerText = `${pct}%`;
+      const circle = document.getElementById('progressCircle');
+      circle.setAttribute('stroke-dasharray', `${pct}, 100`);
+
+      // Audio alarm on 100% completion
+      if (pct === 100 && total > 0 && state.isLocked) {
+        playSuccessAudio();
+        alert("🎉 축하합니다! 오늘의 모든 목표 단계를 완료하여 화면 잠금이 해제되었습니다!");
+        toggleLockMode(false);
+      }
+    }
+
+    // TIMER LOGIC
+    function toggleTimer() {
+      if (state.timerRunning) {
+        clearInterval(timerInterval);
+        state.timerRunning = false;
+        document.getElementById('timerToggleBtn').innerHTML = `<i class="fa-solid fa-play"></i> 몰입 시작`;
+        document.getElementById('timerStatusBadge').innerText = '일시 정지';
+        document.getElementById('timerStatusBadge').className = 'text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30';
+      } else {
+        state.timerRunning = true;
+        document.getElementById('timerToggleBtn').innerHTML = `<i class="fa-solid fa-pause"></i> 일시 정지`;
+        document.getElementById('timerStatusBadge').innerText = '몰입 진행 중';
+        document.getElementById('timerStatusBadge').className = 'text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+
+        timerInterval = setInterval(() => {
+          state.timerSeconds++;
+          if (state.timerSeconds % 60 === 0) {
+            state.totalFocusedMinutes++;
+            document.getElementById('totalFocusedTime').innerText = `${state.totalFocusedMinutes}분`;
+            saveState();
+          }
+          updateTimerDisplay();
+        }, 1000);
+      }
+    }
+
+    function resetTimer() {
+      clearInterval(timerInterval);
+      state.timerRunning = false;
+      state.timerSeconds = 0;
+      document.getElementById('timerToggleBtn').innerHTML = `<i class="fa-solid fa-play"></i> 몰입 시작`;
+      document.getElementById('timerStatusBadge').innerText = '대기 중';
+      document.getElementById('timerStatusBadge').className = 'text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700';
+      updateTimerDisplay();
+    }
+
+    function updateTimerDisplay() {
+      const hrs = Math.floor(state.timerSeconds / 3600).toString().padStart(2, '0');
+      const mins = Math.floor((state.timerSeconds % 3600) / 60).toString().padStart(2, '0');
+      const secs = (state.timerSeconds % 60).toString().padStart(2, '0');
+      document.getElementById('timerDisplay').innerText = `${hrs}:${mins}:${secs}`;
+    }
+
+    // FOCUS LOCK MODE
+    function toggleLockMode(forceState) {
+      if (forceState !== undefined) {
+        state.isLocked = forceState;
+      } else {
+        state.isLocked = !state.isLocked;
+      }
+
+      const appEl = document.getElementById('app');
+      const lockBtn = document.getElementById('lockBtn');
+
+      if (state.isLocked) {
+        // Request Fullscreen
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        }
+        appEl.classList.add('focus-lock-active');
+        lockBtn.innerHTML = `<i class="fa-solid fa-lock-open"></i> <span>목표 미달성 (잠금 중)</span>`;
+        lockBtn.className = 'px-3 py-1.5 text-xs font-medium bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg shadow-md flex items-center gap-1.5 transition';
+      } else {
+        if (document.exitFullscreen && document.fullscreenElement) {
+          document.exitFullscreen().catch(() => {});
+        }
+        appEl.classList.remove('focus-lock-active');
+        lockBtn.innerHTML = `<i class="fa-solid fa-lock"></i> <span>몰입 잠금 시작</span>`;
+        lockBtn.className = 'px-3 py-1.5 text-xs font-medium bg-rose-600 hover:bg-rose-500 text-white rounded-lg shadow-md flex items-center gap-1.5 transition animate-pulse';
+      }
+    }
+
+    function setupLockListeners() {
+      window.addEventListener('beforeunload', (e) => {
+        if (state.isLocked) {
+          e.preventDefault();
+          e.returnValue = '목표 잠금 모드가 활성화되어 있습니다. 정말 나가시겠습니까?';
+        }
+      });
+    }
+
+    // AUDIO WEB API
+    function playSuccessAudio() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+        osc.frequency.exponentialRampToValueAtTime(659.25, ctx.currentTime + 0.2); // E5
+        osc.frequency.exponentialRampToValueAtTime(783.99, ctx.currentTime + 0.4); // G5
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.6);
+      } catch (e) {
+        console.log("Audio play prevented", e);
+      }
+    }
+
+    // DESIGN & COLOR PICKER
+    function openSettingsModal() {
+      document.getElementById('settingsModal').classList.remove('hidden');
+    }
+
+    function closeSettingsModal() {
+      document.getElementById('settingsModal').classList.add('hidden');
+    }
+
+    function applyTheme(primary, bg, card, save = true) {
+      document.documentElement.style.setProperty('--primary-color', primary);
+      document.documentElement.style.setProperty('--bg-color', bg);
+      document.documentElement.style.setProperty('--card-bg', card);
+
+      document.getElementById('primaryColorPicker').value = primary;
+      document.getElementById('bgColorPicker').value = bg;
+
+      state.theme.primary = primary;
+      state.theme.bg = bg;
+      state.theme.card = card;
+
+      if (save) saveState();
+    }
+
+    function customColorChanged() {
+      const primary = document.getElementById('primaryColorPicker').value;
+      const bg = document.getElementById('bgColorPicker').value;
+      applyTheme(primary, bg, '#1e293b');
+    }
+
+    function changeFont(fontName, save = true) {
+      document.body.style.fontFamily = fontName;
+      state.theme.font = fontName;
+      if (save) saveState();
+    }
+
+    // TOOLS MODAL
+    function openAppTool(toolType) {
+      const modal = document.getElementById('toolModal');
+      const titleEl = document.getElementById('toolModalTitle');
+      const bodyEl = document.getElementById('toolModalBody');
+
+      modal.classList.remove('hidden');
+
+      if (toolType === 'notepad') {
+        titleEl.innerText = '📝 퀵 메모장';
+        const savedNote = localStorage.getItem('quick_note_content') || '';
+        bodyEl.innerHTML = `
+          <textarea id="quickNoteArea" oninput="localStorage.setItem('quick_note_content', this.value)" class="w-full h-48 bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-slate-100 focus:outline-none focus:border-indigo-500 resize-none" placeholder="오늘 떠오르는 아이디어나 중요한 메모를 적으세요...">${savedNote}</textarea>
+        `;
+      } else if (toolType === 'calculator') {
+        titleEl.innerText = '🔢 심플 계산기';
+        bodyEl.innerHTML = `
+          <div class="space-y-3">
+            <input id="calcDisplay" type="text" readonly class="w-full bg-slate-900 border border-slate-700 text-right text-xl font-mono p-3 rounded-xl text-indigo-300">
+            <div class="grid grid-cols-4 gap-2 text-xs font-bold">
+              <button onclick="calcInput('7')" class="p-3 bg-slate-800 hover:bg-slate-700 rounded-lg">7</button>
+              <button onclick="calcInput('8')" class="p-3 bg-slate-800 hover:bg-slate-700 rounded-lg">8</button>
+              <button onclick="calcInput('9')" class="p-3 bg-slate-800 hover:bg-slate-700 rounded-lg">9</button>
+              <button onclick="calcInput('/')" class="p-3 bg-indigo-600 hover:bg-indigo-500 rounded-lg">/</button>
+              <button onclick="calcInput('4')" class="p-3 bg-slate-800 hover:bg-slate-700 rounded-lg">4</button>
+              <button onclick="calcInput('5')" class="p-3 bg-slate-800 hover:bg-slate-700 rounded-lg">5</button>
+              <button onclick="calcInput('6')" class="p-3 bg-slate-800 hover:bg-slate-700 rounded-lg">6</button>
+              <button onclick="calcInput('*')" class="p-3 bg-indigo-600 hover:bg-indigo-500 rounded-lg">*</button>
+              <button onclick="calcInput('1')" class="p-3 bg-slate-800 hover:bg-slate-700 rounded-lg">1</button>
+              <button onclick="calcInput('2')" class="p-3 bg-slate-800 hover:bg-slate-700 rounded-lg">2</button>
+              <button onclick="calcInput('3')" class="p-3 bg-slate-800 hover:bg-slate-700 rounded-lg">3</button>
+              <button onclick="calcInput('-')" class="p-3 bg-indigo-600 hover:bg-indigo-500 rounded-lg">-</button>
+              <button onclick="calcClear()" class="p-3 bg-rose-600 hover:bg-rose-500 rounded-lg">C</button>
+              <button onclick="calcInput('0')" class="p-3 bg-slate-800 hover:bg-slate-700 rounded-lg">0</button>
+              <button onclick="calcEval()" class="p-3 bg-emerald-600 hover:bg-emerald-500 rounded-lg">=</button>
+              <button onclick="calcInput('+')" class="p-3 bg-indigo-600 hover:bg-indigo-500 rounded-lg">+</button>
+            </div>
+          </div>
+        `;
+      } else if (toolType === 'ebs') {
+        titleEl.innerText = '🎓 EBS 학습 사이트 바로가기';
+        bodyEl.innerHTML = `
+          <div class="space-y-3 py-4 text-center">
+            <p class="text-xs text-slate-300">새 창에서 EBS 강좌를 열어 공부할 수 있습니다.</p>
+            <a href="https://www.ebsi.co.kr" target="_blank" class="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-md">EBSi 고교강좌 접속하기</a>
+          </div>
+        `;
+      } else if (toolType === 'music') {
+        titleEl.innerText = '🎵 집중 BGM 플레이어';
+        bodyEl.innerHTML = `
+          <div class="space-y-3 py-2 text-center">
+            <p class="text-xs text-slate-300 mb-2">집중력 향상을 위한 백색소음 / Lofi 음악</p>
+            <iframe class="w-full h-40 rounded-xl" src="https://www.youtube.com/embed/jfKfPfyJRdk" title="Lofi Music" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+        `;
+      }
+    }
+
+    function closeToolModal() {
+      document.getElementById('toolModal').classList.add('hidden');
+    }
+
+    // CALCULATOR HELPERS
+    function calcInput(val) {
+      document.getElementById('calcDisplay').value += val;
+    }
+    function calcClear() {
+      document.getElementById('calcDisplay').value = '';
+    }
+    function calcEval() {
+      try {
+        document.getElementById('calcDisplay').value = eval(document.getElementById('calcDisplay').value);
+      } catch (e) {
+        document.getElementById('calcDisplay').value = 'Error';
+      }
+    }
+  </script>
+</body>
+</html>
